@@ -32,7 +32,7 @@ class Particle {
     for (var i = 0; i < this.history.length; i++) {
       context.lineTo(this.history[i].x, this.history[i].y);
     }
-    context.stokeStyle = this.color;
+    context.strokeStyle = this.color;
     context.stroke();
   }
   update() {
