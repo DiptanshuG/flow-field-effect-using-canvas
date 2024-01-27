@@ -4,8 +4,6 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-console.log(ctx);
-
 ctx.fillStyle = "white";
 ctx.stokeStyle = "white";
 ctx.lineWidth = 1;
@@ -24,6 +22,9 @@ class Particle {
     this.maxLength = Math.floor(Math.random() * 100 + 10);
     this.angle = 0;
     this.timer = this.maxLength * 2;
+    this.colors = ["#4c026b", "blue", "green"];
+
+    this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
   }
   draw(context) {
     context.beginPath();
@@ -31,6 +32,7 @@ class Particle {
     for (var i = 0; i < this.history.length; i++) {
       context.lineTo(this.history[i].x, this.history[i].y);
     }
+    context.stokeStyle = this.color;
     context.stroke();
   }
   update() {
@@ -47,16 +49,14 @@ class Particle {
       this.x += this.speedX * this.speedModifier;
       this.y += this.speedY * this.speedModifier;
 
-      // this.x += this.speedX + Math.sin(this.angle) * 30;
-      // this.y += this.speedY + Math.cos(this.angle) * 20;
       this.history.push({ x: this.x, y: this.y });
       if (this.history.length > this.maxLength) {
         this.history.shift();
       }
     } else if (this.history.length > 1) {
       this.history.shift();
-    }else{
-      this.reset()
+    } else {
+      this.reset();
     }
   }
 
@@ -64,14 +64,15 @@ class Particle {
     this.x = Math.floor(Math.random() * this.effect.width);
     this.y = Math.floor(Math.random() * this.effect.height);
     this.history = [{ x: this.x, y: this.y }];
-    this.timer=this.maxLength * 2;
+    this.timer = this.maxLength * 2;
   }
 }
 
 class Effect {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.width = this.canvas.width;
+    this.height = this.canvas.height;
     this.particles = [];
     this.numberOfParticles = 2000;
     this.cellSize = 20;
@@ -79,9 +80,19 @@ class Effect {
     this.cols;
     this.flowFields = [];
     this.zoom = 0.25;
-    this.curve=2.2
-
+    this.curve = 2.2;
+    this.debug = true;
     this.init();
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "d") {
+        this.debug = !this.debug;
+      }
+    });
+
+    window.addEventListener("resize", (e) => {
+      this.resize(e.target.innerWidth, e.target.innerHeight);
+    });
   }
   init() {
     // create flow field
@@ -90,19 +101,46 @@ class Effect {
     this.flowFields = [];
     for (var i = 0; i < this.rows; i++) {
       for (var j = 0; j < this.cols; j++) {
-        let angle = (Math.cos(j * this.zoom) + Math.sin(i * this.zoom)) * this.curve;
+        let angle =
+          (Math.cos(j * this.zoom) + Math.sin(i * this.zoom)) * this.curve;
         this.flowFields.push(angle);
       }
-
-      console.log(this.flowFields);
     }
 
     // create particle
+    this.particles = [];
     for (var i = 0; i < this.numberOfParticles; i++) {
       this.particles.push(new Particle(this));
     }
   }
+  drawGrid(context) {
+    context.save();
+    context.stokeStyle = "green";
+    context.lineWidth = 0.3;
+    for (let c = 0; c < this.cols; c++) {
+      context.beginPath();
+      context.moveTo(this.cellSize * c, 0);
+      context.lineTo(this.cellSize * c, this.height);
+      context.stroke();
+    }
+    for (let r = 0; r < this.rows; r++) {
+      context.beginPath();
+      context.moveTo(0, this.cellSize * r);
+      context.lineTo(this.width, this.cellSize * r);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  resize(width, height) {
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.width = this.canvas.width;
+    this.height = this.canvas.height;
+    this.init();
+  }
   render(context) {
+    if (this.debug) this.drawGrid(context);
     this.particles.forEach((particle) => {
       particle.draw(context);
       particle.update();
@@ -110,10 +148,9 @@ class Effect {
   }
 }
 
-const effect = new Effect(canvas.width, canvas.height);
+const effect = new Effect(canvas);
 
 effect.render(ctx);
-console.log({ effect });
 
 function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
